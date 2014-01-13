@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Iframe Parent</title>
+    <style>
+      html, body {
+        height: 100%; }
+
+      body {
+        background: #fff;
+        color: #333;
+        font-family: Helvetica, Arial, sans-serif;
+        font-weight: 300;
+        height: 100%;
+        margin: 0;
+        padding: 0; }
+
+      .banner__wrapper {
+        background: #f9f9f9;
+        height: 540px;
+        overflow: hidden;
+        width: 100%; }
+
+      .banner {
+        border: none;
+        position: relative; }
+
+      dl, h2 {
+        margin: 1em auto;
+        width: 80%; }
+
+      dd {
+        padding-bottom: 1em; }
+
+      dt {
+        font-weight: 700; }
+
+
+      #main-content {
+        background: #fff;
+        max-width: 100%;
+        overflow: auto;
+        padding: 30px 0 70px; }
+
+
+      #gb {
+        background: #F8F8F8;
+        height: 70px; }
+
+      .layout-container {
+        min-height: 100%;
+        position: relative; }
+
+      .wrap {
+        height: 100%;
+        min-width: 980px;
+        padding-bottom: 50px; }
+
+      .sidebar-layout {
+        display: inline-block;
+        overflow: hidden;
+        position: relative;
+        width: 100%; }
+
+      .app-bar {
+        background: #fff;
+        border-bottom: solid #d4d4d4;
+        border-width: 1px 0;
+        height: 33px;
+        padding: 13px 0;
+        position: relative;
+        margin-bottom: 21px; }
+
+      .sidebar {
+        background: gainsboro;
+        display: inline-block;
+        position: absolute;
+        height: 200px;
+        width: 169px; }
+
+      .center-col {
+        padding-left: 220px; }
+
+      .clear {
+        clear: both; }
+
+      .footer {
+        background: #f9f9f9;
+        border-top: solid #ebebeb;
+        border-width: 1px 0;
+        bottom: 0;
+        clear: both;
+        height: 30px;
+        position: absolute;
+        width: 100%;
+        z-index: 1204; }
+    </style>
+
+    <script src="javascripts/TweenMax.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      /**
+       * Polyfill for querySelectorAll.
+       */
+      if (!document.querySelectorAll) {
+        document.querySelectorAll = function(selector) {
+          var doc = document,
+              head = doc.documentElement.firstChild,
+              styleTag = doc.createElement('STYLE');
+          head.appendChild(styleTag);
+          doc.__qsaels = [];
+
+          styleTag.styleSheet.cssText = selector + "{x:expression(document.__qsaels.push(this))}";
+          window.scrollBy(0, 0);
+
+          return doc.__qsaels;
+        }
+      }
+
+      /**
+       * Flexible add event listener.
+       * @param {Object} obj Object to attach the event.
+       * @param {String} type Type of event to attach.
+       * @param {Function} fn Function to execute when event is triggered.
+       */
+      function addEvent(obj, type, fn) {
+        if (obj.addEventListener) {
+          obj.addEventListener(type, fn, false);
+        } else if (obj.attachEvent) {
+          obj['e' + type + fn] = fn;
+          obj[type + fn] = function() {
+            obj['e' + type + fn](window.event);
+          };
+          obj.attachEvent("on" + type, obj[type + fn]);
+        }
+      }
+
+      /**
+       * Globals for example.
+       */
+      var iframe,
+          _window,
+          wrapper,
+          prevBannerOffsetTop,
+          clearPaddingBottom,
+          animateDown,
+          siblingsHidden = false;
+
+      addEvent(window.top, 'DOMContentLoaded', function() {
+        iframe = document.querySelector('iframe');
+        _window = iframe.contentWindow;
+
+        addEvent(window.top, 'message', processMessage);
+
+        iframe.width = '100%';
+        iframe.height = '100%';
+
+        // iframe banner wrapper
+        wrapper = document.getElementsByClassName('js-banner-wrapper')[0];
+
+        // animate out padding for sticky footer
+        clearPaddingBottom = document.querySelectorAll('.wrap');
+
+        // things that the iframe will animate on top of
+        animateDown = document.querySelectorAll('#gb, .app-bar, .footer, .sidebar, .center-col');
+      });
+
+
+      /**
+       * Send message to iframe.
+       * @param {Object} message Message to be sent. Message is stringified.
+       */
+      function sendMessage(message) {
+        message = JSON.stringify(message);
+        _window.postMessage(message, iframe.src);
+      }
+
+
+      /**
+       * Process the message. Delegating tasks based on the given instruction.
+       * @param {Object} instruction Instruction object with action to take.
+       * @return {Boolean} Get outta there if message origin is not the iframe.
+       */
+      function processMessage(message) {
+        var fromIframe = (message['origin'] === iframe.src.split("/").splice(0, 3).join("/"));
+
+        if (!fromIframe) { return false; }
+
+        var instruction = JSON.parse(message['data'] || '{}');
+        var action = instruction['zg_action'] || '';
+
+        if (action === 'Loaded') {
+          var query = window.location.search.split('ref=');
+          var hasBeenRedirected = (query.length > 1 && query[1].indexOf('redirect') === 0);
+
+          sendMessage({
+            'zg_action': 'Initialize',
+            'zg_banner': (hasBeenRedirected) ? 'full' : 'medium',
+            'zg_mode': 'desktop',
+          });
+
+          if (hasBeenRedirected) {
+            animateToMaximize(0);
+          }
+
+        } else if (action === 'Ready') {
+          animatebannerIn();
+        } else if (action === 'Maximize') {
+          animateToMaximize(0.4);
+        } else if (action === 'Medium') {
+          animateToMedium(0.4);
+        } else if (action === 'Minimize') {
+          animateToMinimize(0.4);
+        } else if (action === 'LoadLink') {
+          // How loading a link is handled is up to you. Rough example:
+          var url = instruction.link || '';
+          window.location.href = url;
+        } else {
+          // Unknown state.
+        }
+      }
+
+
+      /*************************************************************************
+       * Animation Demo.
+       ************************************************************************/
+      var isAnimating_ = false;
+      var mediumHeight = 540;
+      var minimizedHeight = 165;
+
+
+      /**
+       * Example animate in the iframe banner.
+       */
+      function animatebannerIn() {
+        TweenLite.to(wrapper, 0.4, {
+          opacity: 1,
+          ease: Ease.easeOut
+        });
+      }
+
+
+      /**
+       * Animate to maximized state.
+       * @param {Number} duration Animation duration.
+       */
+      function animateToMaximize(duration) {
+        animateTo_(duration, window.innerHeight, 'MaximizeStart', 'MaximizeEnd', true);
+      }
+
+
+      /**
+       * Animate to medium state.
+       * @param {Number} duration Animation duration.
+       */
+      function animateToMedium(duration) {
+        animateTo_(duration, mediumHeight, 'MediumStart', 'MediumEnd');
+      }
+
+
+      /**
+       * Animate to minimized state.
+       * @param {Number} duration Animation duration.
+       */
+      function animateToMinimize(duration) {
+        animateTo_(duration, minimizedHeight, 'MinimizeStart', 'MinimizeEnd');
+      }
+
+
+      /**
+       * Animate non-banner elements into view.
+       * @param {Number} duration Animation duration.
+       */
+      function animateIn(duration) {
+        for (var i = 0, l = clearPaddingBottom.length; i < l; i++) {
+          var elm = clearPaddingBottom[i];
+
+          // clear inline styles
+          elm.style.paddingBottom = '';
+        }
+
+        for (var i = 0, l = animateDown.length; i < l; i++) {
+          var elm = animateDown[i];
+
+          // clear inline styles
+          elm.style.display = '';
+
+          // reset autoAlpha
+          TweenLite.set(elm, { autoAlpha: 1 });
+        }
+
+        siblingsHidden = false;
+      }
+
+
+      /**
+       * Animate non-banner elements out of view.
+       * @param {Number} duration Animation duration.
+       */
+      function animateOut(duration) {
+
+        for (var i = 0, l = clearPaddingBottom.length; i < l; i++) {
+          var elm = clearPaddingBottom[i];
+
+          (function(elm) {
+            var bottom = window.getComputedStyle(elm, null)['padding-bottom'];
+
+            elm.style.paddingBottom = bottom + 'px';
+
+            TweenLite.to(elm, duration * 0.5, {
+              paddingBottom: 0,
+            })
+          })(elm);
+
+        }
+
+        for (var i = 0, l = animateDown.length; i < l; i++) {
+          var elm = animateDown[i];
+
+          (function(elm) {
+            TweenLite.to(elm, duration * 0.5, {
+              autoAlpha: 1,
+              delay: duration * 0.5,
+              onComplete: function() {
+                elm.style.display = 'none';
+              }
+            })
+          })(elm);
+
+        }
+
+        siblingsHidden = true;
+      }
+
+
+      /**
+       * Animate to helper method.
+       * @param {Number} duration Animation duration.
+       * @param {Number} height Height to animate to.
+       * @param {String} startMessage Start transition message to send.
+       * @param {String} endMessage End transition message to send.
+       */
+      function animateTo_(duration, height, startMessage, endMessage, hideSiblings) {
+        if (isAnimating_) {
+          return;
+        }
+
+        hideSiblings = hideSiblings || false;
+
+        isAnimating_ = true;
+        sendMessage({ 'zg_action': startMessage });
+
+        if (hideSiblings) {
+          var bounds = wrapper.getBoundingClientRect();
+
+          prevBannerOffsetTop = bounds['top'];
+
+          // prepare wrapper for animating out to fixed
+          wrapper.style.height = bounds['height'] + 'px';
+          wrapper.style.left = 0;
+          wrapper.style.right = 0;
+          wrapper.style.top = wrapper.offsetTop + 'px';
+          wrapper.style.zIndex = 1300;
+
+          // animate elements out of view
+          animateOut(duration);
+        } else if (siblingsHidden) {
+
+          // prepare wrapper for animating back in from fixed
+          wrapper.style.position = 'relative';
+          wrapper.style.top = -prevBannerOffsetTop + 'px';
+
+          // clear inline styles
+          wrapper.style.left = '';
+          wrapper.style.right = '';
+          wrapper.style.zIndex = '';
+
+          // animate elements back into view
+          animateIn(duration);
+        }
+
+        // animate banner wrapper
+        // animates banner on top of hidden header
+        TweenLite.to(wrapper, duration, {
+          height: height,
+          top: 0,
+          ease: Expo.easeOut,
+          onStart: function() {
+            if (hideSiblings) {
+              wrapper.style.position = 'fixed';
+            }
+          },
+          onComplete: function() {
+            if (!hideSiblings) {
+              wrapper.style.position = '';
+            }
+
+            sendMessage({ 'zg_action': endMessage });
+            isAnimating_ = false;
+          }
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <div class="layout-container">
+      <div class="wrap">
+        <div class="main">
+          <div id="gb"></div>
+          <div class="sidebar-layout clear" style="display: block">
+            <div class="app-bar" style="margin-bottom: 0;"></div>
+
+            <!-- iframe wrapper  -->
+            <div class="banner__wrapper js-banner-wrapper" style="opacity: 0;">
+              <!-- iframe -->
+              <iframe id="iframe" class="banner js-banner" src="demo-iframe.html" frameborder="0"></iframe>
+            </div>
+
+            <div class="sidebar">
+              <ul>
+                <li>Stuff</li>
+                <li>Things</li>
+              </ul>
+            </div>
+            <div class="center-col">
+
+              <div id="main-content">
+                <h2>From iframe:</h2>
+                <dl>
+                  <dt>"Loaded"</dt>
+                  <dd>(JS loaded and ready for init)</dd>
+
+                  <dt>"Ready"</dt>
+                  <dd>(ready to be initialized)</dd>
+
+                  <dt>"Maximize"</dt>
+                  <dd>(instruction to go full view)</dd>
+
+                  <dt>"Medium"</dt>
+                  <dd>(instruction to go medium view)</dd>
+
+                  <dt>"Minimize"</dt>
+                  <dd>(instruction to go to minimized view)</dd>
+
+                  <dt>"LoadLink"</dt>
+                  <dd>(load a link)</dd>
+                </dl>
+
+                <hr>
+
+                <h2>To iframe:</h2>
+                <dl>
+                  <dt>"Initialize"</dt>
+                  <dd>
+                    (instruction to initialize the app at the medium or full banner)
+                    <br>
+                    <a href="/?ref=redirect">Example: entering from "redirect" with a ref (when landing on trends)</a>
+                    <br>
+                    <a href="/">Example: no ref (when landing on trends, not from a redirect)</a>
+                  </dd>
+
+                  <dt>"MaximizeStart"</dt>
+                  <dd>(lets iframe know the start of maximize animation)</dd>
+
+                  <dt>"MaximizeEnd"</dt>
+                  <dd>(lets iframe know the end of maximize animation)</dd>
+
+                  <dt>"MediumStart"</dt>
+                  <dd>(lets iframe know the start of going to medium)</dd>
+
+                  <dt>"MediumEnd"</dt>
+                  <dd>(lets iframe know the end of going to medium)</dd>
+
+                  <dt>"MinimizeStart"</dt>
+                  <dd>(lets iframe know the start of minimize animation)</dd>
+
+                  <dt>"MinimizeEnd"</dt>
+                  <dd>(lets iframe know the end of minimize animation)</dd>
+
+                  <dt>"Pause"</dt>
+                  <dd>(instruction to pause visualization)</dd>
+
+                  <dt>"Resume"</dt>
+                  <dd>(instruction to resume visualization)</dd>
+                </dl>
+              </div>  <!-- end center content -->
+            </div> <!-- end center-col -->
+          </div> <!-- end sidebar-layout -->
+        </div> <!-- end main -->
+      </div> <!-- end wrap -->
+
+      <div class="clear"></div>
+      <div class="footer"></div>
+    </div> <!-- end layout-container -->
+  </body>
+</html>

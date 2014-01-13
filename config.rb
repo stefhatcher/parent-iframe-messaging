@@ -8,5 +8,5 @@ set :js_dir, 'javascripts'
 activate :fjords do |fjords|
   fjords.username = Bundler.settings["fjords_username"]
   fjords.password = Bundler.settings["fjords_password"]
-  fjords.domain = "689dd4d.fjords.cc"
+  fjords.domain = "0826f5e.fjords.cc"
 end

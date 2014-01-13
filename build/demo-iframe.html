@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="initial-scale=1">
+    <title>Iframe</title>
+    <style type="text/css">
+      html, body {
+        height: 100%;
+      }
+
+      body {
+        background: #0b1934;
+        color: white;
+        font-family: Helvetica, Arial, sans-serif;
+        font-weight: 300;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      a {
+        color: white;
+      }
+
+      .text--center {
+        text-align: center;
+      }
+
+      .vertical-align__parent {
+        display: table;
+        height: 100%;
+        width: 100%;
+      }
+
+      .vertical-align__element {
+        display: table-cell;
+        vertical-align: middle;
+      }
+    </style>
+    <script type="text/javascript">
+      /**
+       * Flexible add event listener.
+       * @param {Object} obj Object to attach the event.
+       * @param {String} type Type of event to attach.
+       * @param {Function} fn Function to execute when event is triggered.
+       */
+      function addEvent(obj, type, fn) {
+        if (obj.addEventListener) {
+          obj.addEventListener(type, fn, false);
+        } else if (obj.attachEvent) {
+          obj['e' + type + fn] = fn;
+          obj[type + fn] = function() {
+            obj['e' + type + fn](window.event);
+          };
+          obj.attachEvent("on" + type, obj[type + fn]);
+        }
+      }
+
+      /**
+       * Example namespace.
+       */
+      var app = {};
+
+      addEvent(window, 'DOMContentLoaded', function() {
+        app._parent = window.parent;
+        // signal the parent that we're loaded.
+        app.sendMessage({ 'zg_action': 'Loaded' });
+
+        // listen for messages from the parent.
+        addEvent(window, 'message', app.processMessage);
+      });
+
+
+      /**
+       * Send messages to Parent.
+       * @param {Object} message Message to be sent. Message is stringified.
+       */
+      app.sendMessage = function(message) {
+        message = JSON.stringify(message);
+        app._parent.postMessage(message, '*');
+      };
+
+
+      /**
+       * Process the message. Delegating tasks based on the given instruction.
+       * @param {Object} instruction Instruction object with action to take.
+       */
+      app.processMessage = function(message) {
+        var instruction = JSON.parse(message.data || '{}');
+        var action = instruction['zg_action'] || '';
+
+        if (action === 'Initialize') {
+          app.init(instruction['zg_banner']);
+        } else if (action === 'MaximizeStart') {
+          // iframe handles state
+        } else if (action === 'MaximizeEnd') {
+          // iframe handles state
+        } else if (action === 'MinimizeStart') {
+          // iframe handles state
+        } else if (action === 'MinimizeEnd') {
+          // iframe handles state
+        } else if (action === 'Pause') {
+          // iframe handles state
+        } else if (action === 'Resume') {
+          // iframe handles state
+        } else {
+          // iframe handles state
+        }
+      };
+
+
+      /**
+       * Initialize the app.
+       */
+      app.init = function(mode) {
+        // does something with mode
+
+        var medButton = document.getElementById('medium');
+        var maxButton = document.getElementById('maximize');
+        var minButton = document.getElementById('minimize');
+        var loadLink = document.getElementById('load-link');
+
+        addEvent(medButton, 'click', function() {
+          app.sendMessage({ 'zg_action': 'Medium' });
+        });
+
+        addEvent(maxButton, 'click', function() {
+          app.sendMessage({ 'zg_action': 'Maximize' });
+        });
+
+        addEvent(minButton, 'click', function() {
+          app.sendMessage({ 'zg_action': 'Minimize' });
+        });
+
+        addEvent(loadLink, 'click', function(e) {
+          e.preventDefault();
+          app.sendMessage({ 'zg_action': 'LoadLink', 'link': loadLink.href });
+          return false;
+        });
+
+        app.sendMessage({ 'zg_action': 'Ready' });
+      };
+    </script>
+  </head>
+  <body>
+
+    <div class="vertical-align__parent">
+      <div class="vertical-align__element">
+          <div class="text--center">
+            <button id="medium">Medium</button>
+            <button id="maximize">Maximize</button>
+            <button id="minimize">Minimize</button>
+            <a id="load-link" href="http://placekitten.com/g/400/287">LoadLink</a>
+          </div>
+      </div>
+    </div>
+
+  </body>
+</html>
